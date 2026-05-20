@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FIFA World Cup 2026 Predictor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#1D9E75;--green-light:#E1F5EE;--green-dark:#085041;
+  --amber:#BA7517;--amber-light:#FAEEDA;--amber-dark:#633806;
+  --red:#E24B4A;--red-light:#FCEBEB;
+  --bg:#f8f9fa;--card:#fff;--border:#e0e0e0;
+  --text:#1a1a1a;--muted:#6c757d;--light:#f1f3f4;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+header{background:var(--green);color:white;padding:1.5rem 2rem;display:flex;align-items:center;gap:1rem}
+header h1{font-size:1.4rem;font-weight:600}
+header .sub{font-size:0.85rem;opacity:0.8;margin-top:2px}
+.trophy-icon{font-size:2rem}
+.container{max-width:1400px;margin:0 auto;padding:1.5rem 1rem}
+.tabs{display:flex;gap:4px;margin-bottom:1.5rem;background:var(--card);border-radius:10px;padding:4px;border:1px solid var(--border);width:fit-content;flex-wrap:wrap}
+.tab{padding:8px 20px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:none;color:var(--muted);border-radius:8px;transition:all 0.15s}
+.tab.active{background:var(--green);color:white}
+.tab:hover:not(.active){background:var(--light);color:var(--text)}
+.section{display:none}.section.active{display:block}
+
+/* Groups */
+.groups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem}
+.group-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+.group-header{background:var(--green);color:white;padding:8px 14px;font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase}
+.group-matches{padding:10px}
+.match-row{display:flex;align-items:center;gap:6px;padding:6px;border-radius:8px;margin-bottom:5px;border:1px solid var(--border);background:var(--bg)}
+.match-row:last-child{margin-bottom:0}
+.team-name{flex:1;font-size:12px;font-weight:500;text-align:center;cursor:pointer;padding:4px 6px;border-radius:5px;transition:background 0.12s;word-break:break-word}
+.team-name:hover{background:var(--green-light);color:var(--green-dark)}
+.team-name.winner{background:var(--green-light);color:var(--green-dark);font-weight:700}
+.score-box{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.score-input{width:30px;height:30px;text-align:center;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:5px;background:white;color:var(--text)}
+.score-input:focus{outline:none;border-color:var(--green)}
+.score-sep{font-size:13px;color:var(--muted);font-weight:300}
+.group-standings{border-top:1px solid var(--border);padding:10px}
+.standings-row{display:grid;grid-template-columns:18px 1fr 22px 22px 22px 22px 28px;gap:3px;align-items:center;font-size:11px;padding:3px 4px;border-radius:5px}
+.standings-row.header{color:var(--muted);font-weight:600;margin-bottom:2px}
+.standings-row.qualified{background:var(--green-light)}
+.standings-row.third{background:var(--amber-light)}
+.pos{color:var(--muted);text-align:center;font-size:10px}
+.sname{font-weight:500;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.standings-row.qualified .sname,.standings-row.qualified .spts{color:var(--green-dark)}
+.standings-row.third .sname,.standings-row.third .spts{color:var(--amber)}
+.sval{text-align:center;color:var(--muted)}
+.spts{text-align:center;font-weight:700;color:var(--text)}
+.legend{display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+.legend-dot{width:12px;height:12px;border-radius:2px;flex-shrink:0}
+
+/* Third place section */
+.third-section{margin-top:1.5rem}
+.section-title{font-size:14px;font-weight:600;margin-bottom:0.75rem;color:var(--text)}
+.third-table-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+.third-table{width:100%;font-size:12px;border-collapse:collapse}
+.third-table th{padding:8px 12px;background:var(--light);font-weight:600;font-size:11px;border-bottom:1px solid var(--border);color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;text-align:center}
+.third-table th:first-child,.third-table th:nth-child(2){text-align:left}
+.third-table td{padding:7px 12px;border-bottom:1px solid var(--border);text-align:center}
+.third-table td:first-child,.third-table td:nth-child(3){text-align:left}
+.third-table tr:last-child td{border-bottom:none}
+.third-table tr.advances td{background:var(--amber-light)}
+.third-table tr.advances .tname{color:var(--amber-dark);font-weight:600}
+.third-table tr.eliminated td{background:var(--red-light);opacity:0.7}
+.tname{font-weight:500}
+.rank-num{font-weight:700;color:var(--muted);font-size:11px}
+.advances-badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:3px;font-weight:600;background:var(--amber-light);color:var(--amber-dark);border:1px solid var(--amber)}
+.elim-badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:3px;font-weight:600;background:var(--red-light);color:var(--red);border:1px solid #f09595}
+.incomplete-note{font-size:12px;color:var(--muted);font-style:italic;padding:12px;text-align:center}
+
+/* Knockout */
+.ko-wrapper{overflow-x:auto;padding-bottom:1rem}
+.ko-note{font-size:13px;color:var(--muted);margin-bottom:1rem;line-height:1.5}
+.rounds-row{display:flex;gap:10px;min-width:1100px;align-items:flex-start}
+.round-col{flex:1;display:flex;flex-direction:column;gap:8px;min-width:150px}
+.round-label{font-size:10px;font-weight:600;color:var(--muted);text-align:center;padding:4px 0 8px;text-transform:uppercase;letter-spacing:0.06em}
+.ko-match{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,0.05)}
+.ko-team{display:flex;align-items:center;gap:5px;padding:6px 8px;font-size:11px;font-weight:500;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.12s;min-height:30px}
+.ko-team:last-child{border-bottom:none}
+.ko-team:hover:not(.empty-slot){background:var(--green-light);color:var(--green-dark)}
+.ko-team.winner{background:var(--green-light);color:var(--green-dark);font-weight:700}
+.ko-team.empty-slot{color:#bbb;font-style:italic;cursor:default;font-size:10px}
+.ko-team.is-third{border-left:3px solid var(--amber)}
+.ko-score-box{margin-left:auto;display:flex;align-items:center}
+.ko-sinput{width:24px;height:20px;text-align:center;font-size:10px;border:1px solid var(--border);border-radius:3px;background:var(--bg);color:var(--text)}
+.ko-sinput:focus{outline:none;border-color:var(--green)}
+.champion-box{text-align:center;padding:1.5rem 1rem;background:linear-gradient(135deg,#E1F5EE,#fff);border:2px solid var(--green);border-radius:12px;margin-top:4px}
+.champion-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px}
+.champion-name{font-size:16px;font-weight:700;color:var(--green)}
+.champion-name.empty{color:#bbb;font-size:12px;font-weight:400;font-style:italic}
+.trophy-big{font-size:32px;margin-bottom:6px}
+
+/* Export */
+.export-actions{display:flex;gap:10px;margin-bottom:1.5rem;flex-wrap:wrap}
+.btn-primary{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:var(--green);color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity 0.15s}
+.btn-primary:hover{opacity:0.88}
+.btn-secondary{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:white;color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:500;cursor:pointer}
+.export-section{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:1.5rem}
+.export-section-header{padding:12px 16px;background:var(--light);font-size:13px;font-weight:600;border-bottom:1px solid var(--border)}
+.export-table{width:100%;font-size:12px;border-collapse:collapse}
+.export-table th{text-align:left;padding:8px 12px;background:var(--light);font-weight:600;font-size:11px;border-bottom:1px solid var(--border);color:var(--muted);text-transform:uppercase;letter-spacing:0.04em}
+.export-table td{padding:7px 12px;border-bottom:1px solid var(--border)}
+.export-table tr:last-child td{border-bottom:none}
+.export-table tr:hover td{background:var(--bg)}
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:3px;font-weight:600}
+.badge-q{background:var(--green-light);color:var(--green-dark)}
+.badge-3a{background:var(--amber-light);color:var(--amber-dark);border:1px solid var(--amber)}
+.badge-3e{background:var(--red-light);color:var(--red)}
+.badge-e{background:#f8f9fa;color:#999;border:1px solid #e0e0e0}
+.champ-banner{background:var(--green);color:white;padding:1.5rem;border-radius:12px;text-align:center;margin-bottom:1.5rem}
+.champ-banner-title{font-size:12px;opacity:0.8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px}
+.champ-banner-name{font-size:24px;font-weight:700}
+.champ-banner-empty{font-size:14px;opacity:0.7;font-style:italic}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="trophy-icon">🏆</div>
+  <div>
+    <h1>FIFA World Cup 2026 Predictor</h1>
+    <div class="sub">USA · Canada · Mexico &nbsp;|&nbsp; June 11 – July 19, 2026 &nbsp;|&nbsp; 48 teams · 12 groups</div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('groups',this)">Group Stage</button>
+    <button class="tab" onclick="switchTab('thirds',this)">Best 3rd Places</button>
+    <button class="tab" onclick="switchTab('knockout',this)">Knockout Stage</button>
+    <button class="tab" onclick="switchTab('export',this)">Export</button>
+  </div>
+
+  <div id="sec-groups" class="section active"></div>
+
+  <div id="sec-thirds" class="section">
+    <p style="font-size:13px;color:var(--muted);margin-bottom:1rem;line-height:1.5">
+      All 12 third-place teams are ranked together. The <strong>top 8</strong> advance to the Round of 32. They are ranked by: points → goal difference → goals scored. The bottom 4 are eliminated. Enter your group results first to see this table fill in.
+    </p>
+    <div id="thirds-content"></div>
+  </div>
+
+  <div id="sec-knockout" class="section">
+    <p class="ko-note">
+      Click a team name to advance them. Enter scores for each match. <span style="color:var(--amber);font-weight:500">Orange left border</span> = best 3rd-place team. Complete group stage first for accurate seedings.
+    </p>
+    <div class="ko-wrapper">
+      <div class="rounds-row" id="ko-rounds"></div>
+    </div>
+  </div>
+
+  <div id="sec-export" class="section">
+    <div class="export-actions">
+      <button class="btn-primary" onclick="exportExcel()">⬇ Download Excel (.xlsx)</button>
+      <button class="btn-secondary" onclick="renderExport()">↻ Refresh preview</button>
+    </div>
+    <div id="export-content"></div>
+  </div>
+</div>
+
+<script>
+const GROUPS = {
+  A:['Mexico','South Korea','South Africa','Czechia'],
+  B:['Canada','Switzerland','Qatar','Bosnia & Herz.'],
+  C:['Brazil','Morocco','Scotland','Haiti'],
+  D:['USA','Australia','Paraguay','Türkiye'],
+  E:['Germany','Ecuador','Ivory Coast','Curaçao'],
+  F:['Netherlands','Japan','Tunisia','Sweden'],
+  G:['Belgium','Egypt','Iran','New Zealand'],
+  H:['Spain','Uruguay','Saudi Arabia','Cape Verde'],
+  I:['France','Senegal','Norway','Iraq'],
+  J:['Argentina','Austria','Algeria','Jordan'],
+  K:['Portugal','DR Congo','Uzbekistan','Colombia'],
+  L:['England','Croatia','Ghana','Panama']
+};
+
+const FLAG = {
+  'Mexico':'🇲🇽','South Korea':'🇰🇷','South Africa':'🇿🇦','Czechia':'🇨🇿',
+  'Canada':'🇨🇦','Switzerland':'🇨🇭','Qatar':'🇶🇦','Bosnia & Herz.':'🇧🇦',
+  'Brazil':'🇧🇷','Morocco':'🇲🇦','Scotland':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','Haiti':'🇭🇹',
+  'USA':'🇺🇸','Australia':'🇦🇺','Paraguay':'🇵🇾','Türkiye':'🇹🇷',
+  'Germany':'🇩🇪','Ecuador':'🇪🇨','Ivory Coast':'🇨🇮','Curaçao':'🇨🇼',
+  'Netherlands':'🇳🇱','Japan':'🇯🇵','Tunisia':'🇹🇳','Sweden':'🇸🇪',
+  'Belgium':'🇧🇪','Egypt':'🇪🇬','Iran':'🇮🇷','New Zealand':'🇳🇿',
+  'Spain':'🇪🇸','Uruguay':'🇺🇾','Saudi Arabia':'🇸🇦','Cape Verde':'🇨🇻',
+  'France':'🇫🇷','Senegal':'🇸🇳','Norway':'🇳🇴','Iraq':'🇮🇶',
+  'Argentina':'🇦🇷','Austria':'🇦🇹','Algeria':'🇩🇿','Jordan':'🇯🇴',
+  'Portugal':'🇵🇹','DR Congo':'🇨🇩','Uzbekistan':'🇺🇿','Colombia':'🇨🇴',
+  'England':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','Croatia':'🇭🇷','Ghana':'🇬🇭','Panama':'🇵🇦'
+};
+
+const MATCHUPS_TPL = [[0,1],[2,3],[0,2],[1,3],[0,3],[1,2]];
+
+let groupScores = {};
+let koScores = {};
+let koWinners = {};
+
+function gKey(g,i,s){return `${g}_${i}_${s}`}
+function kKey(r,i,s){return `ko_${r}_${i}_${s}`}
+
+function computeStandings(group){
+  const teams = GROUPS[group];
+  const stats = teams.map(t=>({name:t,w:0,d:0,l:0,gf:0,ga:0,pts:0,group:group}));
+  MATCHUPS_TPL.forEach(([a,b],i)=>{
+    const sa = parseInt(groupScores[gKey(group,i,0)]);
+    const sb = parseInt(groupScores[gKey(group,i,1)]);
+    if(isNaN(sa)||isNaN(sb)) return;
+    stats[a].gf+=sa; stats[a].ga+=sb;
+    stats[b].gf+=sb; stats[b].ga+=sa;
+    if(sa>sb){stats[a].w++;stats[a].pts+=3;stats[b].l++;}
+    else if(sa<sb){stats[b].w++;stats[b].pts+=3;stats[a].l++;}
+    else{stats[a].d++;stats[b].d++;stats[a].pts++;stats[b].pts++;}
+  });
+  stats.sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf);
+  return stats;
+}
+
+function hasAnyScore(group){
+  return MATCHUPS_TPL.some(([,],i)=>
+    groupScores[gKey(group,i,0)]!==undefined && groupScores[gKey(group,i,0)]!==''
+  );
+}
+
+function getQualifiers(){
+  const q={};
+  Object.keys(GROUPS).forEach(g=>{
+    const s = computeStandings(g);
+    q[g] = {first:s[0]?.name||'', second:s[1]?.name||''};
+  });
+  return q;
+}
+
+// Returns ranked list of all 12 third-place teams, sorted by pts/GD/GF
+function getRankedThirds(){
+  const thirds = [];
+  Object.keys(GROUPS).forEach(g=>{
+    const s = computeStandings(g);
+    if(s[2]) thirds.push({...s[2], group:g, gd:s[2].gf-s[2].ga});
+  });
+  thirds.sort((a,b)=>b.pts-a.pts||(b.gd-a.gd)||b.gf-a.gf);
+  return thirds;
+}
+
+// Returns the best 8 third-place teams (the ones that advance)
+function getBest8Thirds(){
+  return getRankedThirds().slice(0,8);
+}
+
+// R32 layout: first 12 slots are fixed group1 vs group2 matchups
+// Last 4 slots are for best 3rd-place teams vs group winners (simplified fair assignment)
+// We assign 3rd-place teams to slots 12-15 in rank order
+const R32_FIXED_SLOTS = [
+  ['A1','B2'],['C1','D2'],['E1','F2'],['G1','H2'],
+  ['I1','J2'],['K1','L2'],['A2','B1'],['C2','D1'],
+  ['E2','F1'],['G2','H1'],['I2','J1'],['K2','L1']
+];
+
+function resolveFixedSlot(slot){
+  const q = getQualifiers();
+  const g = slot.slice(0,-1);
+  const pos = slot.slice(-1);
+  return pos==='1' ? (q[g]?.first||'') : (q[g]?.second||'');
+}
+
+// For the 4 third-place slots, pair best 3rd teams against group winners (slots 0,2,4,6 = group winners)
+// We pair: 3rd_rank1 vs winner from one group, etc. Simplified: assign 3rd to slots 12-15
+// Opponent of each 3rd-place: use group winners A,C,E,G (winners already in slots 0,2,4,6)
+// But since the actual 495-scenario matrix is too complex, we place them in separate matches vs TBD group winners
+const R32_THIRD_OPPONENT_KEYS = ['A1','C1','E1','G1']; // group winners who face 3rd-place teams
+
+function getR32Teams(matchIdx){
+  if(matchIdx < 12){
+    const [s0,s1] = R32_FIXED_SLOTS[matchIdx];
+    return [resolveFixedSlot(s0), resolveFixedSlot(s1)];
+  }
+  // slots 12-15: 3rd place teams
+  const thirds = getBest8Thirds();
+  const thirdIdx = (matchIdx - 12) * 2; // pairs: [0,1], [2,3], [4,5], [6,7]
+  const t1 = thirds[thirdIdx]?.name || '';
+  const t2 = thirds[thirdIdx+1]?.name || '';
+  return [t1, t2];
+}
+
+function isThirdPlaceTeam(name){
+  const thirds = getBest8Thirds();
+  return thirds.some(t=>t.name===name);
+}
+
+const ROUNDS = ['r32','r16','qf','sf','final'];
+const ROUND_LABELS = {'r32':'Round of 32','r16':'Round of 16','qf':'Quarter-finals','sf':'Semi-finals','final':'Final'};
+const ROUND_COUNT = {'r32':16,'r16':8,'qf':4,'sf':2,'final':1};
+
+function getKOTeams(round, idx){
+  if(round==='r32') return getR32Teams(idx);
+  const pr = ROUNDS[ROUNDS.indexOf(round)-1];
+  const t1 = koWinners[`kow_${pr}_${idx*2}`]||'';
+  const t2 = koWinners[`kow_${pr}_${idx*2+1}`]||'';
+  return [t1,t2];
+}
+
+function advanceTeam(round, idx, team){
+  if(!team) return;
+  koWinners[`kow_${round}_${idx}`] = team;
+  renderKO();
+}
+
+// ── RENDER GROUPS ──────────────────────────────────────────────────
+function renderGroups(){
+  const container = document.getElementById('sec-groups');
+  let html = `<div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--green-light);border:1px solid var(--green)"></div>Qualifies (top 2)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--amber-light);border:1px solid var(--amber)"></div>3rd place (may advance)</div>
+    <div class="legend-item" style="color:var(--muted)">Click a team to set as winner · Enter scores for detail</div>
+  </div><div class="groups-grid">`;
+
+  Object.keys(GROUPS).forEach(g=>{
+    const teams = GROUPS[g];
+    html += `<div class="group-card"><div class="group-header">Group ${g}</div><div class="group-matches">`;
+    MATCHUPS_TPL.forEach(([a,b],i)=>{
+      const ta=teams[a], tb=teams[b];
+      const sa=groupScores[gKey(g,i,0)]??'';
+      const sb=groupScores[gKey(g,i,1)]??'';
+      const sa_n=parseInt(sa), sb_n=parseInt(sb);
+      const winner=!isNaN(sa_n)&&!isNaN(sb_n) ? (sa_n>sb_n?ta:sb_n>sa_n?tb:'draw') : '';
+      const tasafe=ta.replace(/'/g,"\\'"), tbsafe=tb.replace(/'/g,"\\'");
+      html += `<div class="match-row">
+        <span class="team-name${winner===ta?' winner':''}" onclick="clickTeam('${g}',${i},${a},${b})">${FLAG[ta]||''} ${ta}</span>
+        <div class="score-box">
+          <input class="score-input" type="number" min="0" max="20" value="${sa}" placeholder="-"
+            onchange="updateScore('${g}',${i},0,this.value)" oninput="updateScore('${g}',${i},0,this.value)">
+          <span class="score-sep">:</span>
+          <input class="score-input" type="number" min="0" max="20" value="${sb}" placeholder="-"
+            onchange="updateScore('${g}',${i},1,this.value)" oninput="updateScore('${g}',${i},1,this.value)">
+        </div>
+        <span class="team-name${winner===tb?' winner':''}" onclick="clickTeam('${g}',${i},${b},${a})">${FLAG[tb]||''} ${tb}</span>
+      </div>`;
+    });
+    html += `</div><div class="group-standings">`;
+    html += `<div class="standings-row header"><span></span><span>Team</span><span>P</span><span>W</span><span>D</span><span>L</span><span>Pts</span></div>`;
+    const standings = computeStandings(g);
+    standings.forEach((s,idx)=>{
+      const cls = idx<2?'qualified':idx===2?'third':'';
+      html += `<div class="standings-row ${cls}">
+        <span class="pos">${idx+1}</span>
+        <span class="sname">${FLAG[s.name]||''} ${s.name}</span>
+        <span class="sval">${s.w+s.d+s.l}</span>
+        <span class="sval">${s.w}</span>
+        <span class="sval">${s.d}</span>
+        <span class="sval">${s.l}</span>
+        <span class="spts">${s.pts}</span>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function clickTeam(g, i, winnerIdx, loserIdx){
+  const sa = groupScores[gKey(g,i,0)]??'';
+  const sb = groupScores[gKey(g,i,1)]??'';
+  if(sa===''||sb===''){
+    const [a,b] = MATCHUPS_TPL[i];
+    if(winnerIdx===a){ groupScores[gKey(g,i,0)]='1'; groupScores[gKey(g,i,1)]='0'; }
+    else { groupScores[gKey(g,i,0)]='0'; groupScores[gKey(g,i,1)]='1'; }
+  }
+  renderGroups();
+  renderKO();
+  renderThirds();
+}
+
+function updateScore(g,i,side,val){
+  groupScores[gKey(g,i,side)] = val;
+  renderGroups();
+  renderKO();
+  renderThirds();
+}
+
+// ── RENDER THIRDS ──────────────────────────────────────────────────
+function renderThirds(){
+  const container = document.getElementById('thirds-content');
+  const allThirds = getRankedThirds();
+
+  if(allThirds.length===0){
+    container.innerHTML = '<div class="third-table-wrap"><p class="incomplete-note">Enter group stage results to see the third-place ranking table.</p></div>';
+    return;
+  }
+
+  // Fill missing groups with blank rows so all 12 show
+  const presentGroups = new Set(allThirds.map(t=>t.group));
+  const missingGroups = Object.keys(GROUPS).filter(g=>!presentGroups.has(g));
+
+  let html = `<div class="third-table-wrap"><table class="third-table">
+    <thead><tr>
+      <th style="width:32px">Rank</th>
+      <th>Team</th>
+      <th>Group</th>
+      <th>Pts</th><th>W</th><th>D</th><th>L</th>
+      <th>GF</th><th>GA</th><th>GD</th>
+      <th>Status</th>
+    </tr></thead><tbody>`;
+
+  allThirds.forEach((t,i)=>{
+    const advances = i < 8;
+    html += `<tr class="${advances?'advances':'eliminated'}">
+      <td><span class="rank-num">${i+1}</span></td>
+      <td class="tname">${FLAG[t.name]||''} ${t.name}</td>
+      <td style="text-align:center;font-weight:600">Group ${t.group}</td>
+      <td style="font-weight:700">${t.pts}</td>
+      <td>${t.w}</td><td>${t.d}</td><td>${t.l}</td>
+      <td>${t.gf}</td><td>${t.ga}</td>
+      <td style="font-weight:600;color:${t.gd>0?'var(--green-dark)':t.gd<0?'var(--red)':'var(--muted)'}">${t.gd>0?'+':''}${t.gd}</td>
+      <td>${advances
+        ? `<span class="advances-badge">✓ Advances (R32)</span>`
+        : `<span class="elim-badge">✗ Eliminated</span>`
+      }</td>
+    </tr>`;
+  });
+
+  if(missingGroups.length>0){
+    html += `<tr><td colspan="11" style="text-align:center;color:var(--muted);font-style:italic;font-size:11px;padding:8px">
+      ${missingGroups.length} group${missingGroups.length>1?'s':''} not yet entered (${missingGroups.map(g=>'Group '+g).join(', ')})
+    </td></tr>`;
+  }
+
+  html += `</tbody></table></div>`;
+
+  if(allThirds.length>0){
+    html += `<p style="font-size:12px;color:var(--muted);margin-top:0.75rem">
+      <strong>Note:</strong> The exact R32 opponents for 3rd-place teams are determined by FIFA's 495-scenario bracket matrix (based on which groups they came from). In the Knockout Stage tab, the best 8 are paired against each other in matches 13–16 of the Round of 32 as a simplified representation.
+    </p>`;
+  }
+
+  container.innerHTML = html;
+}
+
+// ── RENDER KNOCKOUT ──────────────────────────────────────────────────
+function renderKO(){
+  const container = document.getElementById('ko-rounds');
+  let html = '';
+  ROUNDS.forEach(r=>{
+    const n = ROUND_COUNT[r];
+    html += `<div class="round-col"><div class="round-label">${ROUND_LABELS[r]}</div>`;
+    for(let i=0;i<n;i++){
+      const [t1,t2] = getKOTeams(r,i);
+      const w = koWinners[`kow_${r}_${i}`]||'';
+      const s0 = koScores[kKey(r,i,0)]??'';
+      const s1 = koScores[kKey(r,i,1)]??'';
+      const ph1=!t1, ph2=!t2;
+      const t1safe=(t1||'').replace(/'/g,"\\'");
+      const t2safe=(t2||'').replace(/'/g,"\\'");
+      const isT1Third = t1 && isThirdPlaceTeam(t1);
+      const isT2Third = t2 && isThirdPlaceTeam(t2);
+      html += `<div class="ko-match">
+        <div class="ko-team${w===t1&&t1?' winner':''}${ph1?' empty-slot':''}${isT1Third?' is-third':''}"
+          onclick="${t1?`advanceTeam('${r}',${i},'${t1safe}')`:''}" title="${t1?'Click to advance '+t1:''}">
+          ${FLAG[t1]||''} ${t1||'TBD'}
+          <div class="ko-score-box">
+            <input class="ko-sinput" type="number" min="0" max="20" value="${s0}" placeholder="-"
+              onclick="event.stopPropagation()"
+              onchange="koScores['${kKey(r,i,0)}']=this.value" oninput="koScores['${kKey(r,i,0)}']=this.value">
+          </div>
+        </div>
+        <div class="ko-team${w===t2&&t2?' winner':''}${ph2?' empty-slot':''}${isT2Third?' is-third':''}"
+          onclick="${t2?`advanceTeam('${r}',${i},'${t2safe}')`:''}" title="${t2?'Click to advance '+t2:''}">
+          ${FLAG[t2]||''} ${t2||'TBD'}
+          <div class="ko-score-box">
+            <input class="ko-sinput" type="number" min="0" max="20" value="${s1}" placeholder="-"
+              onclick="event.stopPropagation()"
+              onchange="koScores['${kKey(r,i,1)}']=this.value" oninput="koScores['${kKey(r,i,1)}']=this.value">
+          </div>
+        </div>
+      </div>`;
+    }
+    if(r==='final'){
+      const champ = koWinners['kow_final_0']||'';
+      html += `<div class="champion-box">
+        <div class="trophy-big">🏆</div>
+        <div class="champion-label">World Cup Champion</div>
+        <div class="champion-name${champ?'':' empty'}">${champ?(FLAG[champ]||'')+' '+champ:'Pick the winner'}</div>
+      </div>`;
+    }
+    html += `</div>`;
+  });
+  container.innerHTML = html;
+}
+
+// ── RENDER EXPORT ──────────────────────────────────────────────────
+function renderExport(){
+  const champ = koWinners['kow_final_0']||'';
+  let html = '';
+
+  if(champ){
+    html += `<div class="champ-banner"><div class="champ-banner-title">🏆 Your World Cup Champion</div><div class="champ-banner-name">${FLAG[champ]||''} ${champ}</div></div>`;
+  } else {
+    html += `<div class="champ-banner"><div class="champ-banner-title">🏆 World Cup Champion</div><div class="champ-banner-empty">Complete the knockout stage to reveal your champion</div></div>`;
+  }
+
+  // Group standings
+  html += `<div class="export-section"><div class="export-section-header">Group Stage Standings</div>
+    <table class="export-table"><thead><tr><th>Group</th><th>1st</th><th>2nd</th><th>3rd</th><th>4th</th></tr></thead><tbody>`;
+  const best8thirds = new Set(getBest8Thirds().map(t=>t.name));
+  Object.keys(GROUPS).forEach(g=>{
+    const s = computeStandings(g);
+    html += `<tr><td><strong>Group ${g}</strong></td>`;
+    s.forEach((team,i)=>{
+      let badge, btext;
+      if(i<2){badge='badge-q';btext='Q';}
+      else if(i===2&&best8thirds.has(team.name)){badge='badge-3a';btext='3rd ✓';}
+      else if(i===2){badge='badge-3e';btext='3rd ✗';}
+      else{badge='badge-e';btext='Out';}
+      html+=`<td>${FLAG[team.name]||''} ${team.name} <span class="badge ${badge}">${btext}</span> <small style="color:var(--muted)">${team.pts}pts</small></td>`;
+    });
+    html += '</tr>';
+  });
+  html += `</tbody></table></div>`;
+
+  // Best 3rd places
+  const allThirds = getRankedThirds();
+  html += `<div class="export-section"><div class="export-section-header">Best 3rd-Place Teams Ranking</div>
+    <table class="export-table"><thead><tr><th>#</th><th>Team</th><th>Group</th><th>Pts</th><th>GD</th><th>GF</th><th>Status</th></tr></thead><tbody>`;
+  allThirds.forEach((t,i)=>{
+    const adv = i<8;
+    html+=`<tr${adv?' style="background:var(--amber-light)"':''}>
+      <td>${i+1}</td>
+      <td>${FLAG[t.name]||''} ${t.name}</td>
+      <td>Group ${t.group}</td>
+      <td style="font-weight:700">${t.pts}</td>
+      <td>${t.gd>0?'+':''}${t.gd}</td>
+      <td>${t.gf}</td>
+      <td>${adv?'<span class="badge badge-3a">Advances</span>':'<span class="badge badge-3e">Eliminated</span>'}</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div>`;
+
+  // Group matches
+  html += `<div class="export-section"><div class="export-section-header">Group Stage Match Results</div>
+    <table class="export-table"><thead><tr><th>Group</th><th>Home</th><th>Score</th><th>Away</th><th>Winner</th></tr></thead><tbody>`;
+  Object.keys(GROUPS).forEach(g=>{
+    const teams = GROUPS[g];
+    MATCHUPS_TPL.forEach(([a,b],i)=>{
+      const ta=teams[a], tb=teams[b];
+      const sa=groupScores[gKey(g,i,0)]??'', sb=groupScores[gKey(g,i,1)]??'';
+      const sa_n=parseInt(sa), sb_n=parseInt(sb);
+      let winner='—';
+      if(!isNaN(sa_n)&&!isNaN(sb_n)){winner=sa_n>sb_n?`${FLAG[ta]||''} ${ta}`:sb_n>sa_n?`${FLAG[tb]||''} ${tb}`:'Draw';}
+      const score = sa!==''&&sb!==''?`${sa} – ${sb}`:'— : —';
+      html+=`<tr><td>Group ${g}</td><td>${FLAG[ta]||''} ${ta}</td><td style="text-align:center;font-weight:600">${score}</td><td>${FLAG[tb]||''} ${tb}</td><td>${winner}</td></tr>`;
+    });
+  });
+  html += `</tbody></table></div>`;
+
+  // Knockout
+  html += `<div class="export-section"><div class="export-section-header">Knockout Stage</div>
+    <table class="export-table"><thead><tr><th>Round</th><th>Team 1</th><th>Score</th><th>Team 2</th><th>Winner</th></tr></thead><tbody>`;
+  ROUNDS.forEach(r=>{
+    const n = ROUND_COUNT[r];
+    for(let i=0;i<n;i++){
+      const [t1,t2] = getKOTeams(r,i);
+      const s0=koScores[kKey(r,i,0)]??'', s1=koScores[kKey(r,i,1)]??'';
+      const w = koWinners[`kow_${r}_${i}`]||'';
+      const score = s0!==''&&s1!==''?`${s0} – ${s1}`:'— : —';
+      html+=`<tr><td>${ROUND_LABELS[r]}</td><td>${FLAG[t1]||''} ${t1||'TBD'}</td><td style="text-align:center;font-weight:600">${score}</td><td>${FLAG[t2]||''} ${t2||'TBD'}</td><td>${w?(FLAG[w]||'')+' '+w:'—'}</td></tr>`;
+    }
+  });
+  html += `</tbody></table></div>`;
+  document.getElementById('export-content').innerHTML = html;
+}
+
+// ── EXPORT EXCEL ──────────────────────────────────────────────────
+function exportExcel(){
+  if(!window.XLSX){alert('XLSX library not loaded yet.');return;}
+  const wb = XLSX.utils.book_new();
+  const best8thirds = new Set(getBest8Thirds().map(t=>t.name));
+
+  // Sheet 1: Standings
+  const sd=[['Group','Position','Team','Played','Wins','Draws','Losses','GF','GA','GD','Points','Status']];
+  Object.keys(GROUPS).forEach(g=>{
+    computeStandings(g).forEach((t,i)=>{
+      const pl=t.w+t.d+t.l;
+      let status;
+      if(i<2) status='Qualified (top 2)';
+      else if(i===2&&best8thirds.has(t.name)) status='Qualified (best 3rd)';
+      else if(i===2) status='Eliminated (3rd)';
+      else status='Eliminated (4th)';
+      sd.push([`Group ${g}`,i+1,t.name,pl,t.w,t.d,t.l,t.gf,t.ga,t.gf-t.ga,t.pts,status]);
+    });
+    sd.push([]);
+  });
+  const ws1=XLSX.utils.aoa_to_sheet(sd);
+  ws1['!cols']=[{wch:10},{wch:10},{wch:20},{wch:8},{wch:6},{wch:6},{wch:8},{wch:6},{wch:6},{wch:6},{wch:8},{wch:22}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Group Standings');
+
+  // Sheet 2: Best 3rd places
+  const td=[['Rank','Team','Group','Points','Wins','Draws','Losses','GF','GA','GD','Status']];
+  getRankedThirds().forEach((t,i)=>{
+    td.push([i+1,t.name,`Group ${t.group}`,t.pts,t.w,t.d,t.l,t.gf,t.ga,t.gd,i<8?'Advances to Round of 32':'Eliminated']);
+  });
+  const ws2=XLSX.utils.aoa_to_sheet(td);
+  ws2['!cols']=[{wch:6},{wch:20},{wch:10},{wch:8},{wch:6},{wch:6},{wch:8},{wch:6},{wch:6},{wch:6},{wch:25}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Best 3rd Places');
+
+  // Sheet 3: Group Matches
+  const md=[['Group','Home Team','Home Score','Away Score','Away Team','Result','Winner']];
+  Object.keys(GROUPS).forEach(g=>{
+    const teams=GROUPS[g];
+    MATCHUPS_TPL.forEach(([a,b],i)=>{
+      const ta=teams[a],tb=teams[b];
+      const sa=groupScores[gKey(g,i,0)]??'', sb=groupScores[gKey(g,i,1)]??'';
+      const sa_n=parseInt(sa), sb_n=parseInt(sb);
+      let winner='',result='';
+      if(!isNaN(sa_n)&&!isNaN(sb_n)){
+        if(sa_n>sb_n){winner=ta;result='Home win';}
+        else if(sb_n>sa_n){winner=tb;result='Away win';}
+        else{winner='Draw';result='Draw';}
+      }
+      md.push([`Group ${g}`,ta,sa===''?'':Number(sa),sb===''?'':Number(sb),tb,result,winner]);
+    });
+    md.push([]);
+  });
+  const ws3=XLSX.utils.aoa_to_sheet(md);
+  ws3['!cols']=[{wch:10},{wch:20},{wch:12},{wch:12},{wch:20},{wch:12},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws3,'Group Matches');
+
+  // Sheet 4: Knockout
+  const kd=[['Round','Team 1','Score 1','Score 2','Team 2','Winner','Note']];
+  ROUNDS.forEach(r=>{
+    const n=ROUND_COUNT[r];
+    for(let i=0;i<n;i++){
+      const [t1,t2]=getKOTeams(r,i);
+      const s0=koScores[kKey(r,i,0)]??'', s1=koScores[kKey(r,i,1)]??'';
+      const w=koWinners[`kow_${r}_${i}`]||'';
+      const note = (isThirdPlaceTeam(t1)||isThirdPlaceTeam(t2)) ? 'Includes best 3rd-place team' : '';
+      kd.push([ROUND_LABELS[r],t1||'TBD',s0===''?'':Number(s0),s1===''?'':Number(s1),t2||'TBD',w,note]);
+    }
+    kd.push([]);
+  });
+  const ws4=XLSX.utils.aoa_to_sheet(kd);
+  ws4['!cols']=[{wch:16},{wch:20},{wch:10},{wch:10},{wch:20},{wch:20},{wch:28}];
+  XLSX.utils.book_append_sheet(wb,ws4,'Knockout Stage');
+
+  // Sheet 5: Summary
+  const champ=koWinners['kow_final_0']||'Not selected';
+  const sf0=koWinners['kow_sf_0']||'TBD', sf1=koWinners['kow_sf_1']||'TBD';
+  const qf=[0,1,2,3].map(i=>koWinners[`kow_qf_${i}`]||'TBD');
+  const sum=[
+    ['FIFA World Cup 2026 — My Prediction'],[''],
+    ['🏆 Champion', champ],[''],
+    ['Semi-finalists',''],
+    [sf0, sf1],[''],
+    ['Quarter-finalists','','',''],
+    [...qf],[''],
+    ['Best 3rd-place teams advancing'],
+    ...getBest8Thirds().map(t=>[t.name, `Group ${t.group}`, `${t.pts} pts`]),
+    [''],['Generated on', new Date().toLocaleDateString()]
+  ];
+  const ws5=XLSX.utils.aoa_to_sheet(sum);
+  ws5['!cols']=[{wch:30},{wch:20},{wch:15},{wch:15}];
+  XLSX.utils.book_append_sheet(wb,ws5,'Summary');
+
+  XLSX.writeFile(wb,'WC2026_Prediction.xlsx');
+}
+
+// ── TAB SWITCHING ──────────────────────────────────────────────────
+function switchTab(tab, btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('sec-'+tab).classList.add('active');
+  if(tab==='thirds') renderThirds();
+  if(tab==='knockout') renderKO();
+  if(tab==='export') renderExport();
+}
+
+// Init
+renderGroups();
+renderKO();
+renderThirds();
+</script>
+<footer style="margin-top:3rem;padding:1.5rem 2rem;border-top:1px solid var(--border);background:var(--card);font-size:11px;color:var(--muted);line-height:1.6;text-align:center">
+  <p>This is an unofficial fan tool and is not affiliated with, endorsed by, sponsored by, or connected to FIFA, any national football association, or any official World Cup partner.</p>
+  <p style="margin-top:4px">"FIFA", "FIFA World Cup", and related marks are registered trademarks of FIFA. All team names and national flags are used for informational and non-commercial purposes only. No official logos, badges, or crests are used.</p>
+  <p style="margin-top:4px">This tool is free, non-commercial, and intended for personal entertainment only.</p>
+</footer>
+</body>
+</html>
